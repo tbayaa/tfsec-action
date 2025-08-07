@@ -2,17 +2,6 @@
 
 set -xe
 
-if [ -z "${INPUT_GITHUB_TOKEN}" ] ; then
-  echo "::notice title=GitHub API token::Consider setting a GITHUB_TOKEN to prevent GitHub api rate limits"
-fi
-
-TFSEC_VERSION=""
-if [ "$INPUT_VERSION" != "latest" ] && [ -n "$INPUT_VERSION" ]; then
-  TFSEC_VERSION="tags/${INPUT_VERSION}"
-else
-  TFSEC_VERSION="latest"
-fi
-
 function get_release_assets() {
   repo="$1"
   version="$2"
@@ -44,8 +33,23 @@ function install_release() {
   install "${binary}" "/usr/local/bin/${3}"
 }
 
-install_release aquasecurity/tfsec "${TFSEC_VERSION}" tfsec tfsec_checksums.txt
+echo "::group::Install tfsec"
+if [ -z "${INPUT_GITHUB_TOKEN}" ] ; then
+  echo "::notice title=GitHub API token::Consider setting a GITHUB_TOKEN to prevent GitHub api rate limits"
+fi
 
+TFSEC_VERSION=""
+if [ "$INPUT_VERSION" != "latest" ] && [ -n "$INPUT_VERSION" ]; then
+  TFSEC_VERSION="tags/${INPUT_VERSION}"
+else
+  TFSEC_VERSION="latest"
+fi
+
+install_release aquasecurity/tfsec "${TFSEC_VERSION}" tfsec tfsec_checksums.txt
+echo "::endgroup::"
+
+
+echo "::group::Prepare tfsec arguments"
 if [ -n "${GITHUB_WORKSPACE}" ]; then
   cd "${GITHUB_WORKSPACE}" || exit
 fi
@@ -59,5 +63,6 @@ if [ -n "${INPUT_SOFT_FAIL}" ]; then
 fi
 
 FORMAT=${INPUT_FORMAT:-default}
+echo "::endgroup::"
 
 tfsec --format="${FORMAT}" ${SOFT_FAIL} ${TFSEC_ARGS_OPTION} "${INPUT_WORKING_DIRECTORY}"
